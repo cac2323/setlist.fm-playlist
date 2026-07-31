@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import styles from "../page.module.css";
 import { SpotifyAccessActions } from "./SpotifyAccessActions";
@@ -7,7 +6,7 @@ import { SpotifyAccessActions } from "./SpotifyAccessActions";
 export const metadata: Metadata = {
   title: "Spotify access · Setlist Playlist",
   description:
-    "Spotify matching is invite-only while the app is in Spotify development mode. Use Apple Music for public access.",
+    "Spotify matching is not available to the public while the app is in Spotify development mode. Use Apple Music instead.",
 };
 
 export default function SpotifyAccessPage() {
@@ -15,12 +14,12 @@ export default function SpotifyAccessPage() {
     <div className={styles.page}>
       <main className={styles.main}>
         <article className={styles.legalDoc}>
-          <p className={styles.eyebrow}>Spotify</p>
-          <h1>Spotify access is invite-only</h1>
+          <h1>Spotify is not available publicly</h1>
           <p className={styles.legalLead}>
             Spotify&apos;s Web API no longer grants unlimited public access to
-            individual apps. This project stays in Spotify development mode, so only
-            approved tester accounts can connect and create playlists.
+            individual apps. This project stays in Spotify development mode, so
+            matching and playlist creation only work for allowlisted tester
+            accounts—not for the general public.
           </p>
 
           <h2>What this means</h2>
@@ -30,21 +29,16 @@ export default function SpotifyAccessPage() {
               invite.
             </li>
             <li>
-              <strong>Spotify</strong> works only after your Spotify account email is
-              added under User Management in the Spotify Developer Dashboard.
+              <strong>Spotify</strong> is invite-only. Public users cannot connect or
+              create playlists here.
             </li>
             <li>
-              If you&apos;re already approved, connect below to continue matching.
+              If you&apos;re already on the allowlist, connect below to continue
+              matching.
             </li>
           </ul>
 
           <SpotifyAccessActions />
-
-          <p>
-            <Link href="/">Back to home</Link>
-            {" · "}
-            <Link href="/privacy">Privacy</Link>
-          </p>
         </article>
       </main>
     </div>

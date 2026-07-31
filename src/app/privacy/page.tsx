@@ -59,6 +59,11 @@ export default function PrivacyPage() {
             “pending match” intent in your browser’s{" "}
             <code>sessionStorage</code> so matching can resume after the redirect.
           </p>
+          <p>
+            Spotify matching is invite-only while the app is in Spotify development
+            mode. Public users cannot authorize; only allowlisted tester accounts can
+            connect and create playlists. Apple Music remains the open public path.
+          </p>
 
           <h2>What we do not sell</h2>
           <p>

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { readPendingSpotifyMatch } from "@/lib/pendingSpotifyMatch";
 import { navigateTo } from "@/lib/browserNavigation";
+import { readPendingSpotifyMatch } from "@/lib/pendingSpotifyMatch";
 import {
   beginSpotifyAuthorization,
   getSpotifyAuthorizationStatus,
@@ -12,10 +12,6 @@ import {
 
 import styles from "../page.module.css";
 
-/**
- * Increment 1: explain invite-only Spotify + Connect / continue matching.
- * Email waitlist form lands in Increment 2.
- */
 export function SpotifyAccessActions() {
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [hasPendingMatch, setHasPendingMatch] = useState(false);

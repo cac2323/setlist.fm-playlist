@@ -130,4 +130,4 @@ Never commit `.env.local` or private keys (`.p8` / `.pem` are gitignored).
 - Matching and playlist creation need a real destination connection (except when mocks are on).
 - After Spotify authorize locally, keep using `127.0.0.1` so session cookies stay visible to the app.
 - Public API routes are rate-limited per IP; catalog searches also retry upstream `429`s with backoff.
-- **Match with Spotify** opens `/spotify-access` (invite waitlist + Connect for approved testers). Apple Music remains the open public path.
+- **Match with Spotify** opens `/spotify-access` (explains invite-only access + Connect for approved testers). Apple Music remains the open public path.
