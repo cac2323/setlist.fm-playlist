@@ -66,7 +66,7 @@ describe("Home", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/match tracks on apple music or spotify/i),
+      screen.getByText(/match tracks on apple music/i),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/setlist url/i)).toBeInTheDocument();
     const loadButton = screen.getByRole("button", { name: "Load setlist" });

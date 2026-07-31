@@ -20,6 +20,7 @@ import {
   readPendingSpotifyMatch,
   savePendingSpotifyMatch,
 } from "@/lib/pendingSpotifyMatch";
+import { navigateTo } from "@/lib/browserNavigation";
 import {
   getDestinationLabel,
   isSpotifyDestinationEnabled,
@@ -34,7 +35,6 @@ import type { ParsedSetlistUrl } from "@/lib/setlistUrl";
 import { parseSetlistUrl } from "@/lib/setlistUrl";
 import type { NormalizedSetlist } from "@/lib/setlistfm";
 import {
-  beginSpotifyAuthorization,
   createSpotifyPlaylist,
   getSpotifyAuthorizationStatus,
   subscribeToSpotifyAuthorization,
@@ -64,12 +64,17 @@ function clearSpotifyAuthQueryParams() {
   }
 
   const url = new URL(window.location.href);
-  if (!url.searchParams.has("spotify_auth") && !url.searchParams.has("spotify_auth_error")) {
+  if (
+    !url.searchParams.has("spotify_auth") &&
+    !url.searchParams.has("spotify_auth_error") &&
+    !url.searchParams.has("spotify_match")
+  ) {
     return;
   }
 
   url.searchParams.delete("spotify_auth");
   url.searchParams.delete("spotify_auth_error");
+  url.searchParams.delete("spotify_match");
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -327,18 +332,15 @@ export function SetlistUrlForm({
           return;
         }
 
-        const status = await getSpotifyAuthorizationStatus();
-        if (!status.connected) {
-          savePendingSpotifyMatch({
-            setlistId: resolvedParsed.id,
-            setlistUrl: resolvedParsed.url,
-          });
-          beginSpotifyAuthorization();
-          // Navigates away for OAuth. If the user hits Back, pageshow (bfcache)
-          // clears the matching lock so Match buttons work again.
-          return;
-        }
-        setIsSpotifyAuthorized(true);
+        // Spotify is invite-only: save intent and explain on /spotify-access.
+        savePendingSpotifyMatch({
+          setlistId: resolvedParsed.id,
+          setlistUrl: resolvedParsed.url,
+        });
+        setIsMatchingTracks(false);
+        setMatchingDestination(null);
+        navigateTo("/spotify-access");
+        return;
       }
 
       await runCatalogMatch(nextDestination, fetchedSetlist);
@@ -365,8 +367,9 @@ export function SetlistUrlForm({
 
     const params = new URLSearchParams(window.location.search);
     const authResult = params.get("spotify_auth");
+    const resumeMatchOnly = params.get("spotify_match") === "1";
 
-    if (!authResult) {
+    if (!authResult && !resumeMatchOnly) {
       return;
     }
 
@@ -379,6 +382,64 @@ export function SetlistUrlForm({
       // sessionStorage / the URL (those must survive for the remounted effect).
       await Promise.resolve();
       if (cancelled) {
+        return;
+      }
+
+      if (resumeMatchOnly && !authResult) {
+        if (!pending) {
+          clearSpotifyAuthQueryParams();
+          setDestination("spotify");
+          setMatchErrorMessage(
+            "No pending Spotify setlist was found. Load a setlist, then Match with Spotify again.",
+          );
+          setActiveStep("load");
+          return;
+        }
+
+        try {
+          const parsed = parseSetlistUrl(pending.setlistUrl);
+          const setlist = await fetchSetlistById(pending.setlistId);
+          if (cancelled) {
+            return;
+          }
+
+          const status = await getSpotifyAuthorizationStatus().catch(() => null);
+          if (!status?.connected) {
+            clearSpotifyAuthQueryParams();
+            setDestination("spotify");
+            setIsSpotifyAuthorized(false);
+            setSetlistUrl(pending.setlistUrl);
+            setMatchErrorMessage(
+              "Connect Spotify from the access page before continuing to match.",
+            );
+            setActiveStep("load");
+            return;
+          }
+
+          clearPendingSpotifyMatch();
+          clearSpotifyAuthQueryParams();
+          setDestination("spotify");
+          setIsSpotifyAuthorized(true);
+          setSetlistUrl(pending.setlistUrl);
+          setParsedSetlist(parsed);
+          setFetchedSetlist(setlist);
+          setPlaylistName(buildDefaultAppleMusicPlaylistName(setlist));
+          setMatchErrorMessage(null);
+          setActiveStep("load");
+          await runCatalogMatch("spotify", setlist);
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+          clearPendingSpotifyMatch();
+          clearSpotifyAuthQueryParams();
+          setDestination("spotify");
+          setMatchErrorMessage(
+            error instanceof Error ? error.message : "Unable to resume Spotify matching.",
+          );
+          setActiveStep("load");
+        }
+
         return;
       }
 

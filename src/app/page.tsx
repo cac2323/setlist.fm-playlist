@@ -60,8 +60,9 @@ export default async function Home({ searchParams }: HomeProps) {
           <p className={styles.eyebrow}>Setlist to playlist</p>
           <h1>Turn a setlist.fm show into a playlist.</h1>
           <p>
-            Load a show, match tracks on Apple Music or Spotify, then create your
-            playlist in three focused steps.
+            Load a show, match tracks on Apple Music (available to everyone), then
+            create your playlist. Spotify matching is invite-only while the app is in
+            Spotify development mode.
           </p>
         </section>
 

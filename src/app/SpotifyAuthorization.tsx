@@ -101,9 +101,9 @@ export function SpotifyAuthorization({
           <>
             <h2 id="spotify-auth-heading">Connect your Spotify account</h2>
             <p>
-              Authorization grants this app access to create playlists in your
-              library. Tokens are stored in secure httpOnly cookies for up to
-              about 30 days, or until you disconnect.
+              Spotify matching is invite-only (development-mode allowlist). Authorization
+              grants playlist access for approved accounts. Tokens are stored in secure
+              httpOnly cookies for up to about 30 days, or until you disconnect.
             </p>
           </>
         )}

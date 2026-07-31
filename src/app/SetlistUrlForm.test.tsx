@@ -18,8 +18,13 @@ const spotifyAuthMocks = vi.hoisted(() => ({
   unauthorizeSpotify: vi.fn(),
 }));
 
+const navigationMocks = vi.hoisted(() => ({
+  navigateTo: vi.fn(),
+}));
+
 vi.mock("@/lib/appleMusicAuth", () => authMocks);
 vi.mock("@/lib/spotifyAuthClient", () => spotifyAuthMocks);
+vi.mock("@/lib/browserNavigation", () => navigationMocks);
 
 import { SetlistUrlForm } from "./SetlistUrlForm";
 
@@ -36,6 +41,7 @@ describe("SetlistUrlForm", () => {
   afterEach(() => {
     window.sessionStorage.clear();
     window.history.pushState({}, "", "/");
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
@@ -193,50 +199,8 @@ describe("SetlistUrlForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("authorizes Spotify when needed, then matches once connected", async () => {
+  it("routes connected users through the Spotify access page before matching", async () => {
     spotifyAuthMocks.getSpotifyAuthorizationStatus.mockResolvedValue({ connected: true });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          matches: [
-            {
-              alternatives: [],
-              confidence: 0.98,
-              match: {
-                albumName: "The Black Album",
-                artistName: "JAY-Z",
-                confidence: 0.98,
-                id: "spotify-track-1",
-                name: "Encore",
-                reasons: ["Exact title match", "Artist match"],
-              },
-              query: "Jay-Z Encore",
-              reasons: ["Exact title match", "Artist match"],
-              selectedMatches: [
-                {
-                  confidence: 0.98,
-                  match: {
-                    albumName: "The Black Album",
-                    artistName: "JAY-Z",
-                    confidence: 0.98,
-                    id: "spotify-track-1",
-                    name: "Encore",
-                    reasons: ["Exact title match", "Artist match"],
-                  },
-                  query: "Jay-Z Encore",
-                  reasons: ["Exact title match", "Artist match"],
-                  segmentTitle: "Encore",
-                  status: "matched",
-                },
-              ],
-              setlistSong: { artistName: "Jay-Z", name: "Encore", position: 1 },
-              status: "matched",
-            },
-          ],
-        }),
-        { status: 200 },
-      ),
-    );
 
     render(
       <SetlistUrlForm
@@ -255,22 +219,12 @@ describe("SetlistUrlForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /match with spotify/i }));
 
     await waitFor(() =>
-      expect(
-        screen.getByRole("heading", { name: /review and create/i }),
-      ).toBeInTheDocument(),
+      expect(navigationMocks.navigateTo).toHaveBeenCalledWith("/spotify-access"),
     );
     expect(spotifyAuthMocks.beginSpotifyAuthorization).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("region", { name: /proposed spotify matches/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/JAY-Z · The Black Album/i)).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/spotify/match",
-      expect.objectContaining({ method: "POST" }),
-    );
   });
 
-  it("starts Spotify OAuth and stores a pending match intent when disconnected", async () => {
+  it("saves a pending Spotify match and opens the invite access page", async () => {
     render(
       <SetlistUrlForm
         initialFetchedSetlist={{
@@ -288,15 +242,16 @@ describe("SetlistUrlForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /match with spotify/i }));
 
     await waitFor(() =>
-      expect(spotifyAuthMocks.beginSpotifyAuthorization).toHaveBeenCalledOnce(),
+      expect(navigationMocks.navigateTo).toHaveBeenCalledWith("/spotify-access"),
     );
     expect(window.sessionStorage.getItem("setlist-playlist:pending-spotify-match")).toContain(
       "3b497c60",
     );
+    expect(spotifyAuthMocks.beginSpotifyAuthorization).not.toHaveBeenCalled();
     expect(authMocks.authorizeAppleMusic).not.toHaveBeenCalled();
   });
 
-  it("unlocks match buttons after browser back from abandoned Spotify OAuth", async () => {
+  it("does not leave Match buttons stuck after routing to Spotify access", async () => {
     render(
       <SetlistUrlForm
         initialFetchedSetlist={{
@@ -314,17 +269,10 @@ describe("SetlistUrlForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /match with spotify/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /finding matches/i })).toBeDisabled(),
+      expect(navigationMocks.navigateTo).toHaveBeenCalledWith("/spotify-access"),
     );
-
-    const pageShow = new Event("pageshow") as PageTransitionEvent;
-    Object.defineProperty(pageShow, "persisted", { value: true });
-    window.dispatchEvent(pageShow);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /match with spotify/i })).toBeEnabled();
-      expect(screen.getByRole("button", { name: /match with apple music/i })).toBeEnabled();
-    });
+    expect(screen.getByRole("button", { name: /match with spotify/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /match with apple music/i })).toBeEnabled();
   });
 
   it("resumes Spotify matching after a successful OAuth return under StrictMode", async () => {

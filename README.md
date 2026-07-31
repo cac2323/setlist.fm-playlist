@@ -72,11 +72,12 @@ Development-mode Spotify apps may require the app owner to have **Premium** for 
    `SPOTIFY_REDIRECT_URI=https://your-domain.example/api/spotify/auth/callback`
 
    The value must match the Dashboard entry **exactly** (scheme, host, path, no trailing slash mismatch).
-4. Before letting arbitrary users sign in, move the Spotify app out of development-only access:
-   - Request **Extended Quota Mode** / complete Spotify **app review** as required for your use case
-   - Confirm playlist scopes (`playlist-modify-private`, `playlist-modify-public`) are approved for production users
+4. **Spotify stays invite-only for individuals.** Extended Quota Mode is limited to organizations, so public users cannot freely authorize. The live site sends people who click **Match with Spotify** to `/spotify-access`, where approved testers can connect.
+5. To approve someone: Spotify Dashboard → **User Management** → add their Spotify account email, then tell them to use **Connect Spotify** on `/spotify-access`.
 
 Auth cookies are `httpOnly`, `SameSite=Lax`, and `Secure` in production.
+
+**Apple Music** is the public destination for arbitrary users.
 
 ## Apple Music
 
@@ -129,3 +130,4 @@ Never commit `.env.local` or private keys (`.p8` / `.pem` are gitignored).
 - Matching and playlist creation need a real destination connection (except when mocks are on).
 - After Spotify authorize locally, keep using `127.0.0.1` so session cookies stay visible to the app.
 - Public API routes are rate-limited per IP; catalog searches also retry upstream `429`s with backoff.
+- **Match with Spotify** opens `/spotify-access` (invite waitlist + Connect for approved testers). Apple Music remains the open public path.
