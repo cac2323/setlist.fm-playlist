@@ -156,11 +156,16 @@ export function rateLimitedJsonResponse(result: RateLimitResult): NextResponse {
 /**
  * Returns a 429 response when the client exceeds the named policy, otherwise null.
  * In-memory / per-instance — soft protection suitable for a single deploy without Redis.
+ * Set DISABLE_API_RATE_LIMIT=true to skip (useful for temporary production testing).
  */
 export function enforceApiRateLimit(
   request: Request,
   policyName: RateLimitPolicyName,
 ): NextResponse | null {
+  if (process.env.DISABLE_API_RATE_LIMIT === "true") {
+    return null;
+  }
+
   const policy = getRateLimitPolicy(policyName);
   const ip = getClientIp(request);
   const result = checkRateLimit(`${policyName}:${ip}`, policy);

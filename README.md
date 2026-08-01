@@ -122,6 +122,7 @@ See [`.env.example`](.env.example) for the full template.
 | `SPOTIFY_REDIRECT_URI` | Local: `http://127.0.0.1:3000/api/spotify/auth/callback`. Production: `https://<host>/api/spotify/auth/callback` |
 | `SPOTIFY_MARKET` | Market for client-credentials catalog search (default `US`) |
 | `SPOTIFY_USE_MOCKS` | `true` to skip live Spotify catalog calls in tests/dev |
+| `DISABLE_API_RATE_LIMIT` | `true` to skip API rate limits (temporary testing only) |
 
 Never commit `.env.local` or private keys (`.p8` / `.pem` are gitignored).
 

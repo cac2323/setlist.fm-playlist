@@ -65,6 +65,12 @@ export default function TermsPage() {
             changes means you accept the updated terms.
           </p>
 
+          <h2>Contact</h2>
+          <p>
+            Questions about these terms:{" "}
+            <a href="mailto:cac2323@columbia.edu">cac2323@columbia.edu</a>.
+          </p>
+
           <p>
             <Link href="/">Back to home</Link>
             {" · "}

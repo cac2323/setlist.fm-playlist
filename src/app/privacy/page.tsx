@@ -80,8 +80,8 @@ export default function PrivacyPage() {
 
           <h2>Contact</h2>
           <p>
-            If you run or fork this project, replace this section with a contact
-            method for privacy questions.
+            For privacy questions about Setlist Playlist, email{" "}
+            <a href="mailto:cac2323@columbia.edu">cac2323@columbia.edu</a>.
           </p>
 
           <p>

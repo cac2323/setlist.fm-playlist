@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   checkRateLimit,
@@ -14,6 +14,7 @@ describe("rateLimit", () => {
   afterEach(() => {
     resetRateLimitStoreForTests();
     clearRateLimitPolicyOverridesForTests();
+    vi.unstubAllEnvs();
   });
 
   it("allows requests under the limit and tracks remaining", () => {
@@ -93,6 +94,18 @@ describe("rateLimit", () => {
     });
     expect(limited?.headers.get("Retry-After")).toBeTruthy();
     expect(limited?.headers.get("X-RateLimit-Limit")).toBe("1");
+  });
+
+  it("skips enforcement when DISABLE_API_RATE_LIMIT is true", () => {
+    vi.stubEnv("DISABLE_API_RATE_LIMIT", "true");
+    setRateLimitPolicyForTests("setlist", { limit: 1, windowMs: 60_000 });
+
+    const request = new Request("http://localhost/api/setlist", {
+      headers: { "x-forwarded-for": "203.0.113.51" },
+    });
+
+    expect(enforceApiRateLimit(request, "setlist")).toBeNull();
+    expect(enforceApiRateLimit(request, "setlist")).toBeNull();
   });
 
   it("exposes default policies for public routes", () => {
