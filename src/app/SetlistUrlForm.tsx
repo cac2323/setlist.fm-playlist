@@ -16,6 +16,11 @@ import {
   getSetlistSongMatchKey,
 } from "@/lib/appleMusicPlaylist";
 import {
+  clearPendingAppleMusicMatch,
+  readPendingAppleMusicMatch,
+  savePendingAppleMusicMatch,
+} from "@/lib/pendingAppleMusicMatch";
+import {
   clearPendingSpotifyMatch,
   readPendingSpotifyMatch,
   savePendingSpotifyMatch,
@@ -262,6 +267,9 @@ export function SetlistUrlForm({
       setCatalogMatches(matches);
       setDestination(nextDestination);
       setActiveStep("create");
+      if (nextDestination === "apple-music") {
+        clearPendingAppleMusicMatch();
+      }
     } catch (error) {
       setCatalogMatches([]);
       setMatchErrorMessage(
@@ -317,6 +325,12 @@ export function SetlistUrlForm({
 
     try {
       if (nextDestination === "apple-music") {
+        // MusicKit on mobile often full-page redirects; persist intent so we can
+        // resume matching after return (React state is wiped).
+        savePendingAppleMusicMatch({
+          setlistId: resolvedParsed.id,
+          setlistUrl: resolvedParsed.url,
+        });
         const isAuthorized = await getAppleMusicAuthorizationStatus();
         if (!isAuthorized) {
           await authorizeAppleMusic();
@@ -551,6 +565,83 @@ export function SetlistUrlForm({
     };
   }, []);
 
+  // MusicKit authorize on mobile often does a full-page redirect. Resume matching
+  // from the pending intent after Apple returns and the music user token is ready.
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const pending = readPendingAppleMusicMatch();
+    if (!pending) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function resumeAfterAppleMusicAuth() {
+      await Promise.resolve();
+      if (cancelled) {
+        return;
+      }
+
+      let authorized = false;
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        authorized = await getAppleMusicAuthorizationStatus().catch(() => false);
+        if (authorized || cancelled) {
+          break;
+        }
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 250);
+        });
+      }
+
+      if (cancelled || !authorized) {
+        return;
+      }
+
+      setIsAppleMusicAuthorized(true);
+      setDestination("apple-music");
+      setIsMatchingTracks(true);
+      setMatchingDestination("apple-music");
+      setMatchErrorMessage(null);
+
+      try {
+        const parsed = parseSetlistUrl(pending.setlistUrl);
+        const setlist = await fetchSetlistById(pending.setlistId);
+        if (cancelled) {
+          return;
+        }
+
+        setParsedSetlist(parsed);
+        setSetlistUrl(pending.setlistUrl);
+        setFetchedSetlist(setlist);
+        setPlaylistName(buildDefaultAppleMusicPlaylistName(setlist));
+        await runCatalogMatch("apple-music", setlist);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        clearPendingAppleMusicMatch();
+        setMatchErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to resume Apple Music matching after authorization.",
+        );
+        setActiveStep("load");
+        setIsMatchingTracks(false);
+        setMatchingDestination(null);
+      }
+    }
+
+    void resumeAfterAppleMusicAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function handleLoadSetlist(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsFetchingSetlist(true);
@@ -583,6 +674,7 @@ export function SetlistUrlForm({
   }
 
   function handleLoadAnotherSetlist() {
+    clearPendingAppleMusicMatch();
     clearPendingSpotifyMatch();
     setSetlistUrl("");
     setParsedSetlist(null);

@@ -58,6 +58,9 @@ export default function PrivacyPage() {
             While waiting for Spotify login, the app may store a short-lived
             “pending match” intent in your browser’s{" "}
             <code>sessionStorage</code> so matching can resume after the redirect.
+            For Apple Music on mobile, a similar short-lived intent may be stored in{" "}
+            <code>localStorage</code> so matching can resume after MusicKit
+            authorization returns to the page.
           </p>
           <p>
             Spotify matching is invite-only while the app is in Spotify development

@@ -31,6 +31,7 @@ import { SetlistUrlForm } from "./SetlistUrlForm";
 describe("SetlistUrlForm", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    window.localStorage.clear();
     authMocks.getAppleMusicAuthorizationStatus.mockResolvedValue(false);
     authMocks.authorizeAppleMusic.mockResolvedValue(true);
     authMocks.subscribeToAppleMusicAuthorization.mockReturnValue(vi.fn());
@@ -40,6 +41,7 @@ describe("SetlistUrlForm", () => {
 
   afterEach(() => {
     window.sessionStorage.clear();
+    window.localStorage.clear();
     window.history.pushState({}, "", "/");
     vi.unstubAllGlobals();
     vi.clearAllMocks();
@@ -414,6 +416,75 @@ describe("SetlistUrlForm", () => {
       expect.objectContaining({ method: "POST" }),
     );
     expect(window.sessionStorage.getItem("setlist-playlist:pending-spotify-match")).toBeNull();
+  });
+
+  it("resumes Apple Music matching after a mobile auth redirect wipe", async () => {
+    window.localStorage.setItem(
+      "setlist-playlist:pending-apple-music-match",
+      JSON.stringify({
+        savedAt: Date.now(),
+        setlistId: "3b497c60",
+        setlistUrl:
+          "https://www.setlist.fm/setlist/jayz/2026/yankee-stadium-the-bronx-ny-3b497c60.html",
+      }),
+    );
+    authMocks.getAppleMusicAuthorizationStatus.mockResolvedValue(true);
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/api/setlist?")) {
+        return new Response(
+          JSON.stringify({
+            setlist: {
+              artistName: "Jay-Z",
+              id: "3b497c60",
+              songs: [{ artistName: "Jay-Z", name: "Encore", position: 1 }],
+            },
+          }),
+          { status: 200 },
+        );
+      }
+
+      if (url.includes("/api/apple-music/match") && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            matches: [
+              {
+                alternatives: [],
+                confidence: 0.98,
+                match: {
+                  albumName: "The Black Album",
+                  artistName: "JAY-Z",
+                  confidence: 0.98,
+                  id: "apple-track-1",
+                  name: "Encore",
+                  reasons: ["Exact title match"],
+                },
+                query: "Jay-Z Encore",
+                reasons: ["Exact title match"],
+                setlistSong: { artistName: "Jay-Z", name: "Encore", position: 1 },
+                status: "matched",
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+
+      return new Response(JSON.stringify({ error: `Unexpected fetch: ${url}` }), {
+        status: 500,
+      });
+    });
+
+    render(<SetlistUrlForm />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /review and create/i }),
+      ).toBeInTheDocument(),
+    );
+    expect(window.localStorage.getItem("setlist-playlist:pending-apple-music-match")).toBeNull();
+    expect(authMocks.authorizeAppleMusic).not.toHaveBeenCalled();
   });
 
   it("authorizes Apple Music when needed, then matches", async () => {
