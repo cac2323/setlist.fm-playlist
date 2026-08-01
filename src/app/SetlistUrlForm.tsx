@@ -572,11 +572,12 @@ export function SetlistUrlForm({
       return;
     }
 
-    const pending = readPendingAppleMusicMatch();
-    if (!pending) {
+    const pendingIntent = readPendingAppleMusicMatch();
+    if (!pendingIntent) {
       return;
     }
 
+    const { setlistId, setlistUrl } = pendingIntent;
     let cancelled = false;
 
     async function resumeAfterAppleMusicAuth() {
@@ -607,14 +608,14 @@ export function SetlistUrlForm({
       setMatchErrorMessage(null);
 
       try {
-        const parsed = parseSetlistUrl(pending.setlistUrl);
-        const setlist = await fetchSetlistById(pending.setlistId);
+        const parsed = parseSetlistUrl(setlistUrl);
+        const setlist = await fetchSetlistById(setlistId);
         if (cancelled) {
           return;
         }
 
         setParsedSetlist(parsed);
-        setSetlistUrl(pending.setlistUrl);
+        setSetlistUrl(setlistUrl);
         setFetchedSetlist(setlist);
         setPlaylistName(buildDefaultAppleMusicPlaylistName(setlist));
         await runCatalogMatch("apple-music", setlist);
